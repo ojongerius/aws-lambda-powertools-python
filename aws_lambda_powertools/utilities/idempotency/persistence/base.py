@@ -337,6 +337,9 @@ class BasePersistenceLayer(ABC):
         data: Dict[str, Any]
             Payload
         """
+
+        logger.info(f"Input for payload hash.. len: {len(data)}")
+        logger.info(f"Whole dict: {data}")
         data_record = DataRecord(
             idempotency_key=self._get_hashed_idempotency_key(data=data),
             status=STATUS_CONSTANTS["INPROGRESS"],
