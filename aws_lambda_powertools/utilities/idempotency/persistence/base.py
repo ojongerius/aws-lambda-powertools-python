@@ -134,6 +134,8 @@ class BasePersistenceLayer(ABC):
         ----------
         config: IdempotencyConfig
             Idempotency configuration settings
+        data: Dict[str, Any]
+            Data
         function_name: str, Optional
             The name of the function being decorated
         """
@@ -174,7 +176,7 @@ class BasePersistenceLayer(ABC):
 
         """
         if self.event_key_jmespath:
-            data = self.event_key_compiled_jmespath.search(self.data, options=jmespath.Options(**self.jmespath_options))
+            self.data = self.event_key_compiled_jmespath.search(self.data, options=jmespath.Options(**self.jmespath_options))
 
         if self.is_missing_idempotency_key(data=self.data):
             if self.raise_on_no_idempotency_key:
@@ -193,11 +195,6 @@ class BasePersistenceLayer(ABC):
     def _get_hashed_payload(self) -> str:
         """
         Extract payload using validation key jmespath and return a hashed representation
-
-        Parameters
-        ----------
-        data: Dict[str, Any]
-            Payload
 
         Returns
         -------
@@ -228,14 +225,12 @@ class BasePersistenceLayer(ABC):
         hashed_data = self.hash_function(json.dumps(data, cls=Encoder, sort_keys=True).encode())
         return hashed_data.hexdigest()
 
-    def _validate_payload(self, data: Dict[str, Any], data_record: DataRecord) -> None:
+    def _validate_payload(self, data_record: DataRecord) -> None:
         """
         Validate that the hashed payload matches data provided and stored data record
 
         Parameters
         ----------
-        data: Dict[str, Any]
-            Payload
         data_record: DataRecord
             DataRecord instance
 
@@ -246,7 +241,7 @@ class BasePersistenceLayer(ABC):
 
         """
         if self.payload_validation_enabled:
-            data_hash = self.get_hashed_payload(data=data)
+            data_hash = self._get_hashed_payload()
             if data_record.payload_hash != data_hash:
                 raise IdempotencyValidationError("Payload does not match stored record for this event key")
 
@@ -384,14 +379,14 @@ class BasePersistenceLayer(ABC):
         cached_record = self._retrieve_from_cache(idempotency_key=idempotency_key)
         if cached_record:
             logger.debug(f"Idempotency record found in cache with idempotency key: {idempotency_key}")
-            self._validate_payload(data=self.data, data_record=cached_record)
+            self._validate_payload(data_record=cached_record)
             return cached_record
 
         record = self._get_record()
 
         self._save_to_cache(data_record=record)
 
-        self._validate_payload(data=self.data, data_record=record)
+        self._validate_payload(data_record=record)
         return record
 
     # TODO these would all need to be updated too...
@@ -399,10 +394,6 @@ class BasePersistenceLayer(ABC):
     def _get_record(self) -> DataRecord:
         """
         Retrieve item from persistence store using idempotency key and return it as a DataRecord instance.
-
-        Parameters
-        ----------
-        idempotency_key
 
         Returns
         -------

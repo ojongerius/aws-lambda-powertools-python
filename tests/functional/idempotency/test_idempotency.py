@@ -805,7 +805,7 @@ def test_default_no_raise_on_missing_idempotency_key(
     assert "body" in persistence_store.event_key_jmespath
 
     # WHEN getting the hashed idempotency key for an event with no `body` key
-    hashed_key = persistence_store.get_hashed_idempotency_key({})
+    hashed_key = persistence_store._get_hashed_idempotency_key({})
 
     # THEN return the hash of None
     expected_value = f"test-func.{function_name}#" + md5(json_serialize(None).encode()).hexdigest()
@@ -826,7 +826,7 @@ def test_raise_on_no_idempotency_key(
 
     # WHEN getting the hashed idempotency key for an event with no `body` key
     with pytest.raises(IdempotencyKeyError) as excinfo:
-        persistence_store.get_hashed_idempotency_key({})
+        persistence_store._get_hashed_idempotency_key()
 
     # THEN raise IdempotencyKeyError error
     assert "No data found to create a hashed idempotency_key" in str(excinfo.value)
@@ -855,8 +855,8 @@ def test_jmespath_with_powertools_json(
         "body": json_serialize({"id": static_pk_value}),
     }
 
-    # WHEN calling _get_hashed_idempotency_key
-    result = persistence_store.get_hashed_idempotency_key(api_gateway_proxy_event)
+    # WHEN calling __get_hashed_idempotency_key
+    result = persistence_store._get_hashed_idempotency_key(api_gateway_proxy_event)
 
     # THEN the hashed idempotency key should match the extracted values generated hash
     assert result == "test-func.handler#" + persistence_store._generate_hash(expected_value)
@@ -871,9 +871,9 @@ def test_custom_jmespath_function_overrides_builtin_functions(
     persistence_store.configure(config_with_jmespath_options)
 
     with pytest.raises(jmespath.exceptions.UnknownFunctionError, match="Unknown function: powertools_json()"):
-        # WHEN calling _get_hashed_idempotency_key
+        # WHEN calling __get_hashed_idempotency_key
         # THEN raise unknown function
-        persistence_store.get_hashed_idempotency_key({})
+        persistence_store._get_hashed_idempotency_key({})
 
 
 def test_idempotent_lambda_save_inprogress_error(persistence_store: DynamoDBPersistenceLayer, lambda_context):
