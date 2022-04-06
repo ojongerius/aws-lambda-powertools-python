@@ -274,6 +274,7 @@ def test_idempotent_lambda_first_execution_cached(
     stubber.assert_no_pending_responses()
     stubber.deactivate()
 
+
 @pytest.mark.parametrize("idempotency_config", [{"use_local_cache": False}, {"use_local_cache": True}], indirect=True)
 def test_idempotent_lambda_first_execution_event_mutation(
     idempotency_config: IdempotencyConfig,
@@ -711,7 +712,7 @@ def test_in_progress_never_saved_to_cache(
 ):
     # GIVEN a data record with status "INPROGRESS"
     # and persistence_store has use_local_cache = True
-    persistence_store.configure(idempotency_config)
+    persistence_store.configure(idempotency_config)  # TODO: would need to update *this*
     data_record = DataRecord("key", status="INPROGRESS")
 
     # WHEN saving to local cache
@@ -804,7 +805,7 @@ def test_default_no_raise_on_missing_idempotency_key(
     assert "body" in persistence_store.event_key_jmespath
 
     # WHEN getting the hashed idempotency key for an event with no `body` key
-    hashed_key = persistence_store._get_hashed_idempotency_key({})
+    hashed_key = persistence_store.get_hashed_idempotency_key({})
 
     # THEN return the hash of None
     expected_value = f"test-func.{function_name}#" + md5(json_serialize(None).encode()).hexdigest()
@@ -825,7 +826,7 @@ def test_raise_on_no_idempotency_key(
 
     # WHEN getting the hashed idempotency key for an event with no `body` key
     with pytest.raises(IdempotencyKeyError) as excinfo:
-        persistence_store._get_hashed_idempotency_key({})
+        persistence_store.get_hashed_idempotency_key({})
 
     # THEN raise IdempotencyKeyError error
     assert "No data found to create a hashed idempotency_key" in str(excinfo.value)
@@ -855,7 +856,7 @@ def test_jmespath_with_powertools_json(
     }
 
     # WHEN calling _get_hashed_idempotency_key
-    result = persistence_store._get_hashed_idempotency_key(api_gateway_proxy_event)
+    result = persistence_store.get_hashed_idempotency_key(api_gateway_proxy_event)
 
     # THEN the hashed idempotency key should match the extracted values generated hash
     assert result == "test-func.handler#" + persistence_store._generate_hash(expected_value)
@@ -872,7 +873,7 @@ def test_custom_jmespath_function_overrides_builtin_functions(
     with pytest.raises(jmespath.exceptions.UnknownFunctionError, match="Unknown function: powertools_json()"):
         # WHEN calling _get_hashed_idempotency_key
         # THEN raise unknown function
-        persistence_store._get_hashed_idempotency_key({})
+        persistence_store.get_hashed_idempotency_key({})
 
 
 def test_idempotent_lambda_save_inprogress_error(persistence_store: DynamoDBPersistenceLayer, lambda_context):

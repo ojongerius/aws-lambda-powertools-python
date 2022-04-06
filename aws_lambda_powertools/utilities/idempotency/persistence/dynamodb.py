@@ -134,8 +134,8 @@ class DynamoDBPersistenceLayer(BasePersistenceLayer):
             payload_hash=item.get(self.validation_key_attr),
         )
 
-    def _get_record(self, idempotency_key) -> DataRecord:
-        response = self.table.get_item(Key=self._get_key(idempotency_key), ConsistentRead=True)
+    def _get_record(self) -> DataRecord:
+        response = self.table.get_item(Key=self._get_key(self.idempotency_key), ConsistentRead=True)
 
         try:
             item = response["Item"]
