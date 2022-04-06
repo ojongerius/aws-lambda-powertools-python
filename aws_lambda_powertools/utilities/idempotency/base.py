@@ -127,7 +127,7 @@ class IdempotencyHandler:
 
         """
         try:
-            data_record = self.persistence_store.get_record(hashed_key=self.hashed_key)
+            data_record = self.persistence_store.get_record(data=self.data, hashed_key=self.hashed_key)
         except IdempotencyItemNotFoundError:
             # This code path will only be triggered if the record is removed between save_inprogress and get_record.
             logger.debug(
